@@ -40,23 +40,35 @@ def team_list() -> Iterable[str]:
 def compute_team_summary(team: str) -> Dict[str, float]:
     """Aggregate a mix of traditional and advanced metrics for a team."""
     players = load_player_data()
-    team_players = players[players["team"] == team]
-    summary = {
-        "PPG": team_players["points"].mean(),
-        "Usage": team_players["usage_rate"].mean(),
-        "Win Shares": team_players["win_shares"].sum(),
-        "Avg Minutes": team_players["minutes"].mean(),
-    }
     games = load_game_data()
-    team_games = games[games["team"] == team]
-    summary.update(
-        {
-            "Off Rating": team_games["offensive_rating"].mean(),
-            "Def Rating": team_games["defensive_rating"].mean(),
-            "Pace": team_games["pace"].mean(),
-            "Rebound %": team_games["rebound_pct"].mean(),
-        }
-    )
+
+    latest_player_season = players["season"].max()
+    latest_game_season = games["season"].max()
+
+    season_players = players[(players["team"] == team) & (players["season"] == latest_player_season)]
+    team_games = games[(games["team"] == team) & (games["season"] == latest_game_season)]
+
+    # Weight usage by minutes so high-minute players drive the team usage estimate.
+    if not season_players.empty and season_players["minutes"].sum() > 0:
+        usage = float(
+            (season_players["usage_rate"] * season_players["minutes"]).sum()
+            / season_players["minutes"].sum()
+        )
+    else:
+        usage = season_players["usage_rate"].mean()
+
+    summary = {
+        "PPG": team_games["team_points"].mean(),
+        "Opp PPG": team_games["opponent_points"].mean(),
+        "Usage": usage,
+        "Win Shares": season_players["win_shares"].sum(),
+        "Avg Minutes": season_players["minutes"].mean(),
+        "Off Rating": team_games["offensive_rating"].mean(),
+        "Def Rating": team_games["defensive_rating"].mean(),
+        "Pace": team_games["pace"].mean(),
+        "Rebound %": team_games["rebound_pct"].mean(),
+    }
+
     return {k: round(v, 2) for k, v in summary.items()}
 
 
