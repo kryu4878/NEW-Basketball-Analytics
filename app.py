@@ -5,7 +5,7 @@ import altair as alt
 from src import analytics
 
 st.set_page_config(page_title="Basketball Analytics Lab", layout="wide")
-st.title("🏀 Basketball Analytics Lab")
+st.title("🏀 Kev's Basketball Analytics Wonderland")
 st.write(
     "Explore sample NBA data, inspect player trends, and generate quick projections for upcoming games."
 )
