@@ -7,7 +7,6 @@ import random
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-SEASONS = [2024, 2023, 2022, 2021]
 random.seed(42)
 
 team_profiles = {
@@ -107,7 +106,16 @@ players = [
 ]
 
 
-LATEST_SEASON = SEASONS[0]
+def _current_season_start_year(today: dt.date | None = None) -> int:
+    """Return the starting year for the active NBA season."""
+
+    today = today or dt.date.today()
+    return today.year if today.month >= 10 else today.year - 1
+
+
+# Always ship four seasons: active year plus the previous three.
+LATEST_SEASON = _current_season_start_year()
+SEASONS = [LATEST_SEASON - offset for offset in range(4)]
 
 
 def _season_multiplier(season: int) -> float:
