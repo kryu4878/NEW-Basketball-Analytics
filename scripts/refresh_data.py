@@ -10,7 +10,7 @@ import argparse
 import datetime as dt
 import time
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 from nba_api.stats.endpoints import (
@@ -183,16 +183,37 @@ def _season_string(start_year: int) -> str:
     return f"{start_year}-{str(start_year + 1)[-2:]}"
 
 
-def determine_recent_seasons(latest_season: str, past_seasons: int) -> List[str]:
+def _parse_since_season(value: str) -> int:
+    value = value.strip()
+    start = value.split("-")[0]
+    if not start.isdigit():
+        raise argparse.ArgumentTypeError(
+            "--since-season expects a starting season like 2021 or 2021-22"
+        )
+    return int(start)
+
+
+def determine_recent_seasons(
+    latest_season: str, past_seasons: Optional[int] = None, since_season: Optional[int] = None
+) -> List[str]:
     """Return NBA-formatted strings for the current season plus prior seasons."""
 
     start_year = int(latest_season.split("-")[0])
-    return [_season_string(start_year - offset) for offset in range(past_seasons + 1)]
+
+    if since_season is not None:
+        if since_season > start_year:
+            raise ValueError("--since-season must be less than or equal to the latest season")
+        return [_season_string(year) for year in range(start_year, since_season - 1, -1)]
+
+    past = 0 if past_seasons is None else past_seasons
+    return [_season_string(start_year - offset) for offset in range(past + 1)]
 
 
-def refresh(season: str, past_seasons: int, games_per_team: int, days_ahead: int) -> None:
+def refresh(
+    season: str, past_seasons: Optional[int], since_season: Optional[int], games_per_team: int, days_ahead: int
+) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    seasons = determine_recent_seasons(season, past_seasons)
+    seasons = determine_recent_seasons(season, past_seasons, since_season)
 
     player_frames: List[pd.DataFrame] = []
     for season_str in seasons:
@@ -219,15 +240,21 @@ def refresh(season: str, past_seasons: int, games_per_team: int, days_ahead: int
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--season", default=DEFAULT_SEASON, help="Season string such as 2024-25")
-    parser.add_argument(
+    season_group = parser.add_mutually_exclusive_group()
+    season_group.add_argument(
         "--past-seasons",
         type=int,
         default=3,
         help="How many completed seasons to include in addition to the one provided",
+    )
+    season_group.add_argument(
+        "--since-season",
+        type=_parse_since_season,
+        help="Start year for the earliest season to include (e.g., 2021 or 2021-22)",
     )
     parser.add_argument(
         "--games-per-team", type=int, default=6, help="Number of recent games to include per team per season"
     )
     parser.add_argument("--days-ahead", type=int, default=5, help="How many days ahead to pull schedule data")
     args = parser.parse_args()
-    refresh(args.season, args.past_seasons, args.games_per_team, args.days_ahead)
+    refresh(args.season, args.past_seasons, args.since_season, args.games_per_team, args.days_ahead)
