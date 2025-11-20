@@ -35,7 +35,10 @@ st.altair_chart(trend_chart, use_container_width=True)
 st.subheader("Player lookup")
 query = st.text_input("Search by player or team")
 player_results = analytics.search_players(query)
-st.dataframe(player_results, use_container_width=True)
+display_players = player_results.copy()
+if not display_players.empty:
+    display_players["season"] = display_players["season"].astype(str)
+st.dataframe(display_players, use_container_width=True)
 
 if not player_results.empty:
     player_name = st.selectbox("Choose a player for projections", options=player_results["player"])
