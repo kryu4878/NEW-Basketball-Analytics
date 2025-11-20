@@ -136,22 +136,27 @@ If you simply want to recreate the exact data that ships with the repo (for exam
 python scripts/build_sample_data.py
 ```
 
-This recreates `data/players.csv`, `data/team_games.csv`, and `data/upcoming_games.csv` using the same plausible-but-fake numbers committed here, including the full league across the current season and the prior three seasons.
+This recreates `data/players.csv`, `data/team_games.csv`, and `data/upcoming_games.csv` using the same plausible-but-fake numbers committed here. The script automatically targets the active NBA season (based on today’s date) plus the previous three seasons, so the bundled samples stay aligned with the current year whenever you rerun it.
 
 ### Pull real numbers from NBA.com
 
-For live data, the project now includes `scripts/refresh_data.py`, which talks to the public NBA Stats endpoints through the [`nba_api`](https://github.com/swar/nba_api) client. The script automatically pulls the active season **plus the previous three seasons** so your dashboard always has current numbers along with recent history.
+For live data, the project now includes `scripts/refresh_data.py`, which talks to the public NBA Stats endpoints through the [`nba_api`](https://github.com/swar/nba_api) client. You can either pull the active season **plus a specific number of previous seasons** or pin an **earliest season** to include all years through today (helpful if you want to cover 2021-22 up to the current campaign in one shot).
 
 Make sure your virtual environment has the requirements installed and then run:
 
 ```bash
+# Example 1: grab current season + 3 prior seasons (default behavior)
 python scripts/refresh_data.py --season 2024-25 --past-seasons 3 --games-per-team 8 --days-ahead 7
+
+# Example 2: ensure you always have 2021-22 through the active season
+python scripts/refresh_data.py --season 2024-25 --since-season 2021 --games-per-team 8 --days-ahead 7
 ```
 
 Arguments:
 
 - `--season`: season string in NBA format (e.g., `2024-25`).
-- `--past-seasons`: how many completed seasons to include in addition to the one above (defaults to `3`, giving you four total seasons of data).
+- `--past-seasons`: how many completed seasons to include in addition to the one above (defaults to `3`, giving you four total seasons of data). Mutually exclusive with `--since-season`.
+- `--since-season`: earliest starting season to include (e.g., `2021` or `2021-22`) if you want a contiguous history up to the active season. Mutually exclusive with `--past-seasons`.
 - `--games-per-team`: how many recent game logs to keep for each franchise **per season** (used for the projection models).
 - `--days-ahead`: how far into the future to pull the NBA schedule for the `upcoming_games.csv` predictions.
 
